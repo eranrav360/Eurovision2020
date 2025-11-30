@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eurovision 2020 Voting Simulator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const EurovisionVoting = () => {
+          const [countries, setCountries] = useState([
+            { name: 'SWEDEN', code: 'SE', flag: '🇸🇪', points: 0 },
+            { name: 'ROMANIA', code: 'RO', flag: '🇷🇴', points: 0 },
+            { name: 'BULGARIA', code: 'BG', flag: '🇧🇬', points: 0 },
+            { name: 'LITHUANIA', code: 'LT', flag: '🇱🇹', points: 0 },
+            { name: 'GREECE', code: 'GR', flag: '🇬🇷', points: 0 },
+            { name: 'ITALY', code: 'IT', flag: '🇮🇹', points: 0 },
+            { name: 'MALTA', code: 'MT', flag: '🇲🇹', points: 0 },
+            { name: 'SWITZERLAND', code: 'CH', flag: '🇨🇭', points: 0 },
+            { name: 'NORWAY', code: 'NO', flag: '🇳🇴', points: 0 },
+            { name: 'GERMANY', code: 'DE', flag: '🇩🇪', points: 0 },
+            { name: 'AUSTRALIA', code: 'AU', flag: '🇦🇺', points: 0 },
+            { name: 'RUSSIA', code: 'RU', flag: '🇷🇺', points: 0 },
+            { name: 'UNITED KINGDOM', code: 'GB', flag: '🇬🇧', points: 0 },
+            { name: 'POLAND', code: 'PL', flag: '🇵🇱', points: 0 },
+            { name: 'SPAIN', code: 'ES', flag: '🇪🇸', points: 0 },
+            { name: 'FRANCE', code: 'FR', flag: '🇫🇷', points: 0 },
+            { name: 'DENMARK', code: 'DK', flag: '🇩🇰', points: 0 },
+            { name: 'ISRAEL', code: 'IL', flag: '🇮🇱', points: 0 },
+            { name: 'ICELAND', code: 'IS', flag: '🇮🇸', points: 0 },
+            { name: 'NETHERLANDS', code: 'NL', flag: '🇳🇱', points: 0 },
+            { name: 'SERBIA', code: 'RS', flag: '🇷🇸', points: 0 },
+            { name: 'SAN MARINO', code: 'SM', flag: '🇸🇲', points: 0 },
+            { name: 'AUSTRIA', code: 'AT', flag: '🇦🇹', points: 0 },
+            { name: 'CYPRUS', code: 'CY', flag: '🇨🇾', points: 0 },
+            { name: 'ARMENIA', code: 'AM', flag: '🇦🇲', points: 0 },
+            { name: 'FINLAND', code: 'FI', flag: '🇫🇮', points: 0 },
+          ]);
+
+          const [votingCountry, setVotingCountry] = useState('');
+          const [votes, setVotes] = useState({});
+          const [isAnimating, setIsAnimating] = useState(false);
+          const [currentVote, setCurrentVote] = useState(null);
+          const [animationQueue, setAnimationQueue] = useState([]);
+
+          const pointValues = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12];
+
+          const sortedCountries = [...countries].sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            return a.name.localeCompare(b.name);
+          });
+
+          const handleVoteInput = (country, points) => {
+            setVotes(prev => ({
+              ...prev,
+              [country]: points
+            }));
+          };
+
+          const generateRandomVotes = () => {
+            // Get all point values that need to be assigned
+            const availablePoints = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12];
+            
+            // Shuffle the countries array
+            const shuffledCountries = [...countries].sort(() => Math.random() - 0.5);
+            
+            // Take first 10 countries and assign points
+            const newVotes = {};
+            shuffledCountries.slice(0, 10).forEach((country, index) => {
+              newVotes[country.name] = availablePoints[index];
+            });
+            
+            setVotes(newVotes);
+          };
+
+          const submitVotes = () => {
+            if (!votingCountry) {
+              alert('אנא בחר מדינה מצביעה');
+              return;
+            }
+
+            const voteEntries = Object.entries(votes)
+              .filter(([_, points]) => points > 0)
+              .sort((a, b) => a[1] - b[1]);
+
+            if (voteEntries.length === 0) {
+              alert('אנא הזן לפחות הצבעה אחת');
+              return;
+            }
+
+            setAnimationQueue(voteEntries);
+            setIsAnimating(true);
+          };
+
+          useEffect(() => {
+            if (animationQueue.length > 0 && !currentVote) {
+              const [nextCountry, nextPoints] = animationQueue[0];
+              setCurrentVote({ country: nextCountry, points: nextPoints });
+              
+              setTimeout(() => {
+                setCountries(prev => 
+                  prev.map(c => 
+                    c.name === nextCountry 
+                      ? { ...c, points: c.points + nextPoints }
+                      : c
+                  )
+                );
+
+                setTimeout(() => {
+                  setCurrentVote(null);
+                  setAnimationQueue(prev => prev.slice(1));
+                  
+                  if (animationQueue.length === 1) {
+                    setIsAnimating(false);
+                    setVotes({});
+                    setVotingCountry('');
+                  }
+                }, 1500);
+              }, 500);
+            }
+          }, [animationQueue, currentVote]);
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 p-8 text-white font-sans">
+              <div className="max-w-7xl mx-auto">
+                <h1 className="text-5xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-400">
+                  Eurovision 2020 Voting Simulator
+                </h1>
+
+                {/* Scoreboard */}
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  {/* Left Column */}
+                  <div className="space-y-2">
+                    {sortedCountries.slice(0, Math.ceil(sortedCountries.length / 2)).map((country, idx) => (
+                      <div
+                        key={country.name}
+                        className={`flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 transition-all duration-500 ${
+                          currentVote?.country === country.name ? 'ring-4 ring-yellow-400 scale-105' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <span className="text-2xl font-bold text-white/60 w-8">{idx + 1}</span>
+                          <img 
+                            src={`https://flagcdn.com/w80/${country.code.toLowerCase()}.png`}
+                            alt={country.name}
+                            className="w-12 h-9 object-cover rounded shadow-lg"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'inline';
+                            }}
+                          />
+                          <span className="text-lg font-black text-white bg-white/20 px-3 py-1 rounded hidden">{country.code}</span>
+                          <span className="font-semibold text-lg">{country.name}</span>
+                        </div>
+                        <span className={`text-3xl font-bold ${
+                          currentVote?.country === country.name ? 'text-yellow-400 animate-pulse' : 'text-white'
+                        }`}>
+                          {country.points}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-2">
+                    {sortedCountries.slice(Math.ceil(sortedCountries.length / 2)).map((country, idx) => (
+                      <div
+                        key={country.name}
+                        className={`flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 transition-all duration-500 ${
+                          currentVote?.country === country.name ? 'ring-4 ring-yellow-400 scale-105' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <span className="text-2xl font-bold text-white/60 w-8">
+                            {Math.ceil(sortedCountries.length / 2) + idx + 1}
+                          </span>
+                          <img 
+                            src={`https://flagcdn.com/w80/${country.code.toLowerCase()}.png`}
+                            alt={country.name}
+                            className="w-12 h-9 object-cover rounded shadow-lg"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'inline';
+                            }}
+                          />
+                          <span className="text-lg font-black text-white bg-white/20 px-3 py-1 rounded hidden">{country.code}</span>
+                          <span className="font-semibold text-lg">{country.name}</span>
+                        </div>
+                        <span className={`text-3xl font-bold ${
+                          currentVote?.country === country.name ? 'text-yellow-400 animate-pulse' : 'text-white'
+                        }`}>
+                          {country.points}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Current Vote Display */}
+                {currentVote && (
+                  <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-yellow-400 to-pink-500 rounded-3xl px-16 py-12 shadow-2xl z-50 animate-pulse">
+                    <div className="text-center">
+                      <img 
+                        src={`https://flagcdn.com/w320/${countries.find(c => c.name === currentVote.country)?.code.toLowerCase()}.png`}
+                        alt={currentVote.country}
+                        className="w-40 h-28 object-cover rounded-xl shadow-2xl mx-auto mb-4 border-4 border-white/50"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
+                      />
+                      <div className="text-6xl font-black text-white bg-white/20 px-8 py-4 rounded-xl inline-block mb-4 hidden">
+                        {countries.find(c => c.name === currentVote.country)?.code}
+                      </div>
+                      <div className="text-4xl font-bold mb-2">{currentVote.country}</div>
+                      <div className="text-7xl font-black text-white">+{currentVote.points}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Voting Panel */}
+                {!isAnimating && (
+                  <div className="bg-white/5 backdrop-blur-md rounded-3xl p-8 border border-white/20">
+                    <h2 className="text-3xl font-bold mb-6 text-center">
+                      🎤 הזן הצבעות
+                    </h2>
+                    
+                    <div className="mb-6">
+                      <label className="block text-xl mb-3 font-semibold">
+                        מדינה מצביעה:
+                      </label>
+                      <input
+                        type="text"
+                        value={votingCountry}
+                        onChange={(e) => setVotingCountry(e.target.value)}
+                        placeholder="לדוגמה: CYPRUS"
+                        className="w-full px-6 py-4 rounded-2xl bg-white/10 border-2 border-white/30 text-white text-xl placeholder-white/50 focus:outline-none focus:border-yellow-400 transition-all"
+                        disabled={isAnimating}
+                      />
+                      <button
+                        onClick={generateRandomVotes}
+                        disabled={isAnimating}
+                        className="mt-3 w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-xl text-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2"
+                      >
+                        🎲 בחירה רנדומלית
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                      {countries.map(country => (
+                        <div key={country.name} className="space-y-2">
+                          <label className="block text-sm font-semibold flex items-center gap-2">
+                            <img 
+                              src={`https://flagcdn.com/w40/${country.code.toLowerCase()}.png`}
+                              alt={country.name}
+                              className="w-10 h-7 object-cover rounded shadow"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'inline';
+                              }}
+                            />
+                            <span className="text-sm font-black text-white bg-white/20 px-2 py-1 rounded hidden">{country.code}</span>
+                            <span className="text-xs">{country.name}</span>
+                          </label>
+                          <select
+                            value={votes[country.name] || 0}
+                            onChange={(e) => handleVoteInput(country.name, Number(e.target.value))}
+                            className="w-full px-3 py-2 rounded-xl bg-white/10 border-2 border-white/30 text-white focus:outline-none focus:border-yellow-400 transition-all"
+                            disabled={isAnimating}
+                          >
+                            <option value={0}>0</option>
+                            {pointValues.map(val => (
+                              <option key={val} value={val}>{val}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={submitVotes}
+                      disabled={isAnimating}
+                      className="w-full bg-gradient-to-r from-yellow-400 to-pink-500 text-white font-bold py-5 px-8 rounded-2xl text-2xl hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl"
+                    >
+                      {isAnimating ? '⏳ מציג הצבעות...' : '🎉 הצג הצבעות!'}
+                    </button>
+                  </div>
+                )}
+
+                <div className="text-center mt-8 text-white/70">
+                  <p className="text-lg">💡 בחר מדינה מצביעה, הזן נקודות לכל מדינה (1-12), ולחץ "הצג הצבעות"</p>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<EurovisionVoting />);
+    </script>
+</body>
+</html>
