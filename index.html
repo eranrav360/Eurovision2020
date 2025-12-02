@@ -53,6 +53,34 @@
           const [animationQueue, setAnimationQueue] = useState([]);
           const [votedCountries, setVotedCountries] = useState([]);
           const [votingPhase, setVotingPhase] = useState('jury'); // 'jury' or 'televote'
+          const [showSaveMenu, setShowSaveMenu] = useState(false);
+
+          // Load saved data on mount
+          useEffect(() => {
+            const savedData = localStorage.getItem('eurovisionData');
+            if (savedData) {
+              try {
+                const data = JSON.parse(savedData);
+                if (data.countries) setCountries(data.countries);
+                if (data.votedCountries) setVotedCountries(data.votedCountries);
+                if (data.votingPhase) setVotingPhase(data.votingPhase);
+                if (data.televotes) setTelevotes(data.televotes);
+              } catch (e) {
+                console.error('Error loading saved data:', e);
+              }
+            }
+          }, []);
+
+          // Auto-save whenever important data changes
+          useEffect(() => {
+            const dataToSave = {
+              countries,
+              votedCountries,
+              votingPhase,
+              televotes
+            };
+            localStorage.setItem('eurovisionData', JSON.stringify(dataToSave));
+          }, [countries, votedCountries, votingPhase, televotes]);
 
           const pointValues = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12];
 
@@ -101,6 +129,133 @@
               setTelevotes({});
               setVotingCountry('');
               setVotingPhase('jury');
+              localStorage.removeItem('eurovisionData');
+            }
+          };
+
+          const exportData = () => {
+            const dataToExport = {
+              countries,
+              votedCountries,
+              votingPhase,
+              televotes,
+              exportDate: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(dataToExport, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `eurovision-votes-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+          };
+
+          const importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const data = JSON.parse(e.target.result);
+                if (data.countries) setCountries(data.countries);
+                
+                // Handle votedCountries
+                let votedList = data.votedCountries || [];
+                
+                // If votedCountries is empty but we have jury points, calculate based on data
+                if (votedList.length === 0 && data.votingPhase === 'jury' && data.countries) {
+                  // Check if there are any jury points assigned
+                  const hasJuryPoints = data.countries.some(c => c.points > 0);
+                  if (hasJuryPoints) {
+                    // Assume all 26 countries have voted if we're importing jury results
+                    votedList = Array(26).fill().map((_, i) => `COUNTRY_${i + 1}`);
+                  }
+                }
+                
+                setVotedCountries(votedList);
+                
+                // Set phase and check if should switch to televote
+                if (data.votingPhase) {
+                  setVotingPhase(data.votingPhase);
+                  
+                  // If jury phase and all 26 have voted, switch to televote
+                  if (data.votingPhase === 'jury' && votedList.length >= 26) {
+                    setTimeout(() => {
+                      alert('🎉 כל המדינות הצביעו! עובר להצבעת הקהל!');
+                      setVotingPhase('televote');
+                    }, 500);
+                  }
+                }
+                
+                if (data.televotes) setTelevotes(data.televotes);
+                alert('✅ הנתונים נטענו בהצלחה!');
+              } catch (error) {
+                alert('❌ שגיאה בקריאת הקובץ');
+                console.error(error);
+              }
+            };
+            reader.readAsText(file);
+          };
+
+          const viewSavedData = () => {
+            const savedData = localStorage.getItem('eurovisionData');
+            if (savedData) {
+              console.log('=== נתונים שמורים ב-LocalStorage ===');
+              console.log(JSON.parse(savedData));
+              alert('📊 הנתונים הודפסו לקונסול! (לחץ F12 לפתיחת הקונסול)');
+            } else {
+              alert('❌ אין נתונים שמורים');
+            }
+          };
+
+          const saveToSlot = (slotNumber) => {
+            const dataToSave = {
+              countries,
+              votedCountries,
+              votingPhase,
+              televotes,
+              saveDate: new Date().toISOString()
+            };
+            localStorage.setItem(`eurovisionSlot${slotNumber}`, JSON.stringify(dataToSave));
+            alert(`✅ נשמר בחריץ ${slotNumber}!`);
+          };
+
+          const loadFromSlot = (slotNumber) => {
+            const savedData = localStorage.getItem(`eurovisionSlot${slotNumber}`);
+            if (!savedData) {
+              alert(`❌ אין שמירה בחריץ ${slotNumber}`);
+              return;
+            }
+            
+            try {
+              const data = JSON.parse(savedData);
+              if (data.countries) setCountries(data.countries);
+              if (data.votedCountries) setVotedCountries(data.votedCountries);
+              if (data.votingPhase) setVotingPhase(data.votingPhase);
+              if (data.televotes) setTelevotes(data.televotes);
+              const saveDate = data.saveDate ? new Date(data.saveDate).toLocaleString('he-IL') : 'לא ידוע';
+              alert(`✅ נטען מחריץ ${slotNumber}!\nתאריך שמירה: ${saveDate}`);
+            } catch (error) {
+              alert('❌ שגיאה בטעינת הנתונים');
+              console.error(error);
+            }
+          };
+
+          const getSaveSlotInfo = (slotNumber) => {
+            const savedData = localStorage.getItem(`eurovisionSlot${slotNumber}`);
+            if (!savedData) return null;
+            try {
+              const data = JSON.parse(savedData);
+              return {
+                date: data.saveDate ? new Date(data.saveDate).toLocaleString('he-IL') : 'לא ידוע',
+                phase: data.votingPhase === 'jury' ? 'הצבעת שופטים' : 'הצבעת קהל',
+                votedCount: data.votedCountries?.length || 0
+              };
+            } catch {
+              return null;
             }
           };
 
@@ -171,7 +326,31 @@
             <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 p-8 text-white font-sans">
               <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
-                  <div className="flex-1"></div>
+                  <div className="flex-1 flex gap-2">
+                    <button
+                      onClick={exportData}
+                      className="bg-blue-500/80 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-all hover:scale-105 flex items-center gap-2"
+                      title="ייצא נתונים לקובץ JSON"
+                    >
+                      💾 ייצוא
+                    </button>
+                    <label className="bg-green-500/80 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-all hover:scale-105 flex items-center gap-2 cursor-pointer">
+                      📥 ייבוא
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={importData}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      onClick={viewSavedData}
+                      className="bg-purple-500/80 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition-all hover:scale-105 flex items-center gap-2"
+                      title="הצג נתונים בקונסול"
+                    >
+                      👁️ הצג
+                    </button>
+                  </div>
                   <h1 className="text-5xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-400">
                     Eurovision 2020 Voting Simulator
                   </h1>
@@ -423,6 +602,58 @@
                           🎉 הצג תוצאות הקהל!
                         </button>
                       </>
+                    )}
+                  </div>
+                )}
+
+                {/* Save/Load Slots Menu */}
+                {!isAnimating && (
+                  <div className="mt-8 bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-2xl font-bold">💾 שמירה וטעינה</h3>
+                      <button
+                        onClick={() => setShowSaveMenu(!showSaveMenu)}
+                        className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all"
+                      >
+                        {showSaveMenu ? '▼ הסתר' : '▶ הצג'}
+                      </button>
+                    </div>
+                    
+                    {showSaveMenu && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {[1, 2, 3].map(slot => {
+                          const info = getSaveSlotInfo(slot);
+                          return (
+                            <div key={slot} className="bg-white/5 rounded-xl p-4 border border-white/10">
+                              <div className="text-lg font-bold mb-2">חריץ {slot}</div>
+                              {info ? (
+                                <div className="text-sm text-white/70 mb-3">
+                                  <div>📅 {info.date}</div>
+                                  <div>📊 {info.phase}</div>
+                                  <div>✅ {info.votedCount} מדינות הצביעו</div>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-white/50 mb-3 italic">ריק</div>
+                              )}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => saveToSlot(slot)}
+                                  className="flex-1 bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                                >
+                                  💾 שמור
+                                </button>
+                                <button
+                                  onClick={() => loadFromSlot(slot)}
+                                  className="flex-1 bg-green-500 hover:bg-green-600 px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={!info}
+                                >
+                                  📥 טען
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 )}
