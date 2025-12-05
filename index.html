@@ -45,6 +45,25 @@
             { name: 'FINLAND', code: 'FI', flag: '🇫🇮', points: 0 },
           ]);
 
+          // Non-finalist countries that vote but cannot receive points (15 countries)
+          const nonFinalistVoters = [
+            { name: 'IRELAND', code: 'IE', flag: '🇮🇪' },
+            { name: 'CROATIA', code: 'HR', flag: '🇭🇷' },
+            { name: 'SLOVENIA', code: 'SI', flag: '🇸🇮' },
+            { name: 'BELARUS', code: 'BY', flag: '🇧🇾' },
+            { name: 'NORTH MACEDONIA', code: 'MK', flag: '🇲🇰' },
+            { name: 'CZECH REPUBLIC', code: 'CZ', flag: '🇨🇿' },
+            { name: 'AZERBAIJAN', code: 'AZ', flag: '🇦🇿' },
+            { name: 'ALBANIA', code: 'AL', flag: '🇦🇱' },
+            { name: 'ESTONIA', code: 'EE', flag: '🇪🇪' },
+            { name: 'UKRAINE', code: 'UA', flag: '🇺🇦' },
+            { name: 'BELGIUM', code: 'BE', flag: '🇧🇪' },
+            { name: 'MOLDOVA', code: 'MD', flag: '🇲🇩' },
+            { name: 'PORTUGAL', code: 'PT', flag: '🇵🇹' },
+            { name: 'GEORGIA', code: 'GE', flag: '🇬🇪' },
+            { name: 'LATVIA', code: 'LV', flag: '🇱🇻' }
+          ];
+
           const [votingCountry, setVotingCountry] = useState('');
           const [votes, setVotes] = useState({});
           const [televotes, setTelevotes] = useState({});
@@ -175,8 +194,8 @@
                   // Check if there are any jury points assigned
                   const hasJuryPoints = data.countries.some(c => c.points > 0);
                   if (hasJuryPoints) {
-                    // Assume all 26 countries have voted if we're importing jury results
-                    votedList = Array(26).fill().map((_, i) => `COUNTRY_${i + 1}`);
+                    // Assume all 41 countries have voted if we're importing jury results
+                    votedList = Array(41).fill().map((_, i) => `COUNTRY_${i + 1}`);
                   }
                 }
                 
@@ -193,8 +212,8 @@
                 if (data.votingPhase) {
                   setVotingPhase(data.votingPhase);
                   
-                  // If jury phase and all 26 have voted, switch to televote
-                  if (data.votingPhase === 'jury' && votedList.length >= 26) {
+                  // If jury phase and all 41 have voted, switch to televote
+                  if (data.votingPhase === 'jury' && votedList.length >= 41) {
                     setTimeout(() => {
                       alert('🎉 כל המדינות הצביעו! עובר להצבעת הקהל!');
                       setVotingPhase('televote');
@@ -330,8 +349,8 @@
                       const newVotedCountries = [...votedCountries, votingCountry.toUpperCase()];
                       setVotedCountries(newVotedCountries);
                       
-                      // Check if all 26 countries have voted - switch to televote phase
-                      if (newVotedCountries.length === 26) {
+                      // Check if all 41 countries have voted - switch to televote phase
+                      if (newVotedCountries.length === 41) {
                         setTimeout(() => {
                           alert('🎉 כל המדינות הצביעו! עכשיו מתחילה הצבעת הקהל!');
                           setVotingPhase('televote');
@@ -497,7 +516,7 @@
                     {votingPhase === 'jury' ? (
                       <>
                         <h2 className="text-3xl font-bold mb-6 text-center">
-                          🎤 הצבעת שופטים ({votedCountries.length}/26)
+                          🎤 הצבעת שופטים ({41 - votedCountries.length}/{votedCountries.length})
                         </h2>
                         
                         <div className="mb-6">
